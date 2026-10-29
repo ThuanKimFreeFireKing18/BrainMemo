@@ -185,7 +185,11 @@ $$
 
 * $\mathcal{N}_{\text{in}}(v)$: Tập hợp các khái niệm tiên quyết trực tiếp trỏ đến $v$.
 * $\text{AGGREGATE}$: Hàm gom cụm (Mean/Max/LSTM Aggregator).
-* $\mathbf{h}_v^{(K)} \in \mathbb{R}^{d_{\text{concept}}}$: Vector nhúng hoàn chỉnh của khái niệm $v$ sau $K$ tầng lan truyền thông điệp.
+* Vector nhúng hoàn chỉnh của khái niệm $v$ sau $K$ tầng lan truyền thông điệp:
+
+$$
+\mathbf{h}_v^{(K)} \in \mathbb{R}^{d_{\text{concept}}}
+$$
 
 ##### C. Cập nhật Trạng thái Năng lực Người học (Temporal Cognitive State)
 Tại mỗi bước thời gian $t$, học viên tương tác với bài tập thuộc khái niệm $c_t$ với kết quả $r_t \in \{0, 1\}$. Vector tương tác $\mathbf{x}_t$ được tạo thành từ việc ghép nối vector nhúng của khái niệm và kết quả làm bài:
@@ -214,16 +218,26 @@ $$
 $$
 
 ##### E. Giải thuật Truy vết Nguyên nhân Gốc rễ & Sắp xếp Lộ trình (Root-cause & Topological Planner)
+
 1. **Lọc nút yếu kém:** Xác định tập hợp các khái niệm học viên chưa nắm vững:
 
 $$
 \mathcal{V}_{\text{weak}} = \left\lbrace v \in \mathcal{V} \mid P(v \mid \mathbf{s}_u) < \tau \right\rbrace \quad (\text{với ngưỡng } \tau = 0.5)
 $$
 
-2. **Truy vết gốc (Root-cause Backtracking):** Với mỗi khái niệm $v \in \mathcal{V}_{\text{weak}}$, duyệt ngược theo các cạnh tiên quyết trỏ vào $\mathcal{N}_{\text{in}}^*(v)$. Khái niệm gốc $v_{\text{root}}$ là nút không có cạnh vào nào thuộc $\mathcal{V}_{\text{weak}}$ (bậc vào trong đồ thị con bằng 0).
-3. **Sắp xếp lộ trình (Topological Sorting):** Áp dụng thuật toán Kahn trên đồ thị con cảm ứng sinh bởi các nút cần phục hồi để đảm bảo học viên luôn học khái niệm nền tảng trước khi bước sang khái niệm dẫn xuất.
+2. **Truy vết gốc (Root-cause Backtracking):** Với mỗi khái niệm yếu kém $v \in \mathcal{V}_{\text{weak}}$, tiến hành duyệt ngược theo tập hợp các cạnh tiên quyết trỏ vào nút:
 
----
+$$
+\mathcal{N}_{\text{in}}^*(v)
+$$
+
+Khái niệm gốc $v_{\text{root}}$ được định nghĩa là nút không có cạnh vào nào thuộc tập yếu kém (tức bậc vào trong đồ thị con bằng 0):
+
+$$
+v_{\text{root}} \in \left\lbrace v \in \mathcal{V}_{\text{weak}} \mid \text{deg}_{\text{in}}^{\text{sub}}(v) = 0 \right\rbrace
+$$
+
+3. **Sắp xếp lộ trình (Topological Sorting):** Áp dụng thuật toán Kahn trên đồ thị con cảm ứng sinh bởi các nút cần phục hồi để đảm bảo học viên luôn học khái niệm nền tảng trước khi bước sang khái niệm dẫn xuất.
 
 ### 2. UML biểu diễn hệ thống (System UML)
 
