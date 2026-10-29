@@ -20,7 +20,7 @@ Bài toán nghiên cứu thuộc lĩnh vực **Mô hình hóa Tri thức Ngườ
 
 #### 1.2. Các thực thể nghiệp vụ cốt lõi
 * **Khái niệm tri thức (Knowledge Concept / KC):** Đơn vị kiến thức nguyên tử cấu thành môn học (ví dụ: *Quy tắc chuỗi*, *Đạo hàm riêng*, *Lan truyền ngược*).
-* **Quan hệ tiên quyết (Prerequisite Dependency):** Cạnh có hướng $(C_i \xrightarrow{prerequisite} C_j)$ thể hiện khái niệm $C_i$ là điều kiện bắt buộc phải nắm vững trước khi tiếp thu khái niệm $C_j$.
+* **Quan hệ tiên quyết (Prerequisite Dependency):** Cạnh có hướng $(C_i \xrightarrow{\text{prerequisite}} C_j)$ thể hiện khái niệm $C_i$ là điều kiện bắt buộc phải nắm vững trước khi tiếp thu khái niệm $C_j$.
 * **Vết tương tác người học (Interaction Trace):** Cặp giá trị có thứ tự thời gian $x_t = (c_t, r_t)$, trong đó $c_t$ là khái niệm được kiểm tra tại thời điểm $t$, $r_t \in \{0, 1\}$ thể hiện kết quả làm bài (0: sai, 1: đúng).
 * **Lỗ hổng tri thức (Knowledge Gap / Deficiency):** Tập hợp các khái niệm có xác suất làm chủ $P < 0.5$, đặc biệt là các nút gốc trên đồ thị.
 * **Lộ trình thích ứng (Adaptive Remediation Path):** Chuỗi thứ tự các bài học/khái niệm cần ôn tập lại, được sắp xếp dựa trên sự lan truyền tri thức trên đồ thị con bị hổng.
@@ -127,7 +127,6 @@ flowchart TD
 ### 1. Phân tích hệ thống (System Analysis)
 
 #### 1.1. Kiến trúc Pipeline Học máy Tổng thể (End-to-End Pipeline)
-Kiến trúc hệ thống được phân rã thành 4 tầng kỹ thuật đảm nhiệm các pha từ dữ liệu thô đến giao diện tương tác:
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -163,39 +162,65 @@ Kiến trúc hệ thống được phân rã thành 4 tầng kỹ thuật đảm
 
 ##### A. Biểu diễn Đồ thị Tri thức (Knowledge Graph Representation)
 Đồ thị tri thức được mô hình hóa dưới dạng một Đồ thị có hướng không chu trình (Directed Acyclic Graph - DAG):
-$$\mathcal{G} = (\mathcal{V}, \mathcal{E})$$
+
+$$
+\mathcal{G} = (\mathcal{V}, \mathcal{E})
+$$
+
 * $\mathcal{V} = \{v_1, v_2, \dots, v_M\}$: Tập hợp $M$ khái niệm tri thức.
-* $\mathcal{E} = \{(v_i, v_j) \mid v_i \xrightarrow{prerequisite} v_j\}$: Tập hợp các cạnh có hướng thể hiện quan hệ tiên quyết.
+* $\mathcal{E} = \{(v_i, v_j) \mid v_i \xrightarrow{\text{prerequisite}} v_j\}$: Tập hợp các cạnh có hướng thể hiện quan hệ tiên quyết.
 * Ma trận kề: $\mathbf{A} \in \{0, 1\}^{M \times M}$, trong đó $A_{ij} = 1$ nếu $v_i$ là điều kiện tiên quyết của $v_j$.
-* Ma trận đặc trưng ban đầu của các nút: $\mathbf{X} \in \mathbb{R}^{M \times d_{in}}$.
+* Ma trận đặc trưng ban đầu của các nút: $\mathbf{X} \in \mathbb{R}^{M \times d_{\text{in}}}$.
 
 ##### B. Cơ chế Truyền thông điệp trên Đồ thị (Graph Neural Message Passing)
 Để học được biểu diễn của từng khái niệm có chứa ngữ cảnh của các khái niệm tiên quyết xung quanh, mô hình sử dụng lớp mạng **GraphSAGE** (hoặc **GAT**):
 
-$$\mathbf{h}_{\mathcal{N}(v)}^{(k)} = \text{AGGREGATE}_k \left( \left\{ \mathbf{h}_u^{(k-1)}, \forall u \in \mathcal{N}_{in}(v) \right\} \right)$$
-$$\mathbf{h}_v^{(k)} = \sigma \left( \mathbf{W}^{(k)} \cdot \left[ \mathbf{h}_v^{(k-1)} \,\|\, \mathbf{h}_{\mathcal{N}(v)}^{(k)} \right] \right)$$
+$$
+\mathbf{h}_{\mathcal{N}(v)}^{(k)} = \text{AGGREGATE}_k \left( \left\lbrace \mathbf{h}_u^{(k-1)}, \forall u \in \mathcal{N}_{\text{in}}(v) \right\rbrace \right)
+$$
 
-* $\mathcal{N}_{in}(v)$: Tập hợp các khái niệm tiên quyết trực tiếp trỏ đến $v$.
+$$
+\mathbf{h}_v^{(k)} = \sigma \left( \mathbf{W}^{(k)} \cdot \left[ \mathbf{h}_v^{(k-1)} \parallel \mathbf{h}_{\mathcal{N}(v)}^{(k)} \right] \right)
+$$
+
+* $\mathcal{N}_{\text{in}}(v)$: Tập hợp các khái niệm tiên quyết trực tiếp trỏ đến $v$.
 * $\text{AGGREGATE}$: Hàm gom cụm (Mean/Max/LSTM Aggregator).
-* $\mathbf{h}_v^{(K)} \in \mathbb{R}^{d_{concept}}$: Vector nhúng hoàn chỉnh của khái niệm $v$ sau $K$ tầng lan truyền thông điệp.
+* $\mathbf{h}_v^{(K)} \in \mathbb{R}^{d_{\text{concept}}}$: Vector nhúng hoàn chỉnh của khái niệm $v$ sau $K$ tầng lan truyền thông điệp.
 
 ##### C. Cập nhật Trạng thái Năng lực Người học (Temporal Cognitive State)
 Tại mỗi bước thời gian $t$, học viên tương tác với bài tập thuộc khái niệm $c_t$ với kết quả $r_t \in \{0, 1\}$. Vector tương tác $\mathbf{x}_t$ được tạo thành từ việc ghép nối vector nhúng của khái niệm và kết quả làm bài:
-$$\mathbf{x}_t = [\mathbf{h}_{c_t}^{(K)} \,\|\, r_t] \in \mathbb{R}^{d_{concept} + 1}$$
+
+$$
+\mathbf{x}_t = \left[ \mathbf{h}_{c_t}^{(K)} \parallel r_t \right] \in \mathbb{R}^{d_{\text{concept}} + 1}
+$$
 
 Trạng thái nhận thức tiềm ẩn $\mathbf{s}_u^{(t)}$ của học viên $u$ được cập nhật lũy tiến thông qua mạng hồi quy **GRU (Gated Recurrent Unit)**:
-$$\mathbf{s}_u^{(t)} = \text{GRU}(\mathbf{x}_t, \mathbf{s}_u^{(t-1)})$$
+
+$$
+\mathbf{s}_u^{(t)} = \text{GRU}(\mathbf{x}_t, \mathbf{s}_u^{(t-1)})
+$$
 
 ##### D. Dự đoán và Hàm mất mát (Prediction Head & Loss Function)
 Xác suất học viên $u$ trả lời đúng một khái niệm kiểm tra $c_{t+1}$ tại thời điểm kế tiếp được dự đoán bằng một mạng Perceptron đa tầng (MLP) kết hợp hàm Sigmoid:
-$$\hat{r}_{t+1} = P(r_{t+1} = 1 \mid c_{t+1}, \mathbf{s}_u^{(t)}) = \sigma \left( \mathbf{W}_p \cdot \left[ \mathbf{s}_u^{(t)} \,\|\, \mathbf{h}_{c_{t+1}}^{(K)} \right] + b_p \right)$$
+
+$$
+\hat{r}_{t+1} = P(r_{t+1} = 1 \mid c_{t+1}, \mathbf{s}_u^{(t)}) = \sigma \left( \mathbf{W}_p \cdot \left[ \mathbf{s}_u^{(t)} \parallel \mathbf{h}_{c_{t+1}}^{(K)} \right] + b_p \right)
+$$
 
 Hàm mất mát Binary Cross-Entropy trên toàn bộ tập dữ liệu tương tác:
-$$\mathcal{L} = -\sum_{u} \sum_{t} \left( r_t \log \hat{r}_t + (1 - r_t) \log (1 - \hat{r}_t) \right) + \lambda \|\Theta\|_2^2$$
+
+$$
+\mathcal{L} = -\sum_{u} \sum_{t} \left( r_t \log \hat{r}_t + (1 - r_t) \log (1 - \hat{r}_t) \right) + \lambda \|\Theta\|_2^2
+$$
 
 ##### E. Giải thuật Truy vết Nguyên nhân Gốc rễ & Sắp xếp Lộ trình (Root-cause & Topological Planner)
-1. **Lọc nút yếu kém:** Tập hợp $\mathcal{V}_{weak} = \{v \in \mathcal{V} \mid P(v \mid \mathbf{s}_u) < \tau\}$ (với ngưỡng $\tau = 0.5$).
-2. **Truy vết gốc (Root-cause Backtracking):** Với mỗi $v \in \mathcal{V}_{weak}$, truy vết ngược theo các cạnh tiên quyết vào $\mathcal{N}_{in}^*(v)$. Khái niệm gốc $v_{root}$ là nút không có cạnh vào nào thuộc $\mathcal{V}_{weak}$ (bậc vào trong đồ thị con bằng 0).
+1. **Lọc nút yếu kém:** Xác định tập hợp các khái niệm học viên chưa nắm vững:
+
+$$
+\mathcal{V}_{\text{weak}} = \left\lbrace v \in \mathcal{V} \mid P(v \mid \mathbf{s}_u) < \tau \right\rbrace \quad (\text{với ngưỡng } \tau = 0.5)
+$$
+
+2. **Truy vết gốc (Root-cause Backtracking):** Với mỗi khái niệm $v \in \mathcal{V}_{\text{weak}}$, duyệt ngược theo các cạnh tiên quyết trỏ vào $\mathcal{N}_{\text{in}}^*(v)$. Khái niệm gốc $v_{\text{root}}$ là nút không có cạnh vào nào thuộc $\mathcal{V}_{\text{weak}}$ (bậc vào trong đồ thị con bằng 0).
 3. **Sắp xếp lộ trình (Topological Sorting):** Áp dụng thuật toán Kahn trên đồ thị con cảm ứng sinh bởi các nút cần phục hồi để đảm bảo học viên luôn học khái niệm nền tảng trước khi bước sang khái niệm dẫn xuất.
 
 ---
