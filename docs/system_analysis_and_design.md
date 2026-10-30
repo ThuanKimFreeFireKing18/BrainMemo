@@ -44,80 +44,87 @@ Bài toán nghiên cứu thuộc lĩnh vực **Mô hình hóa Tri thức Ngườ
 
 ```mermaid
 flowchart LR
-    Student["fa:fa-user-graduate Học viên (Student)"]
-    Expert["fa:fa-chalkboard-teacher Chuyên gia / Giảng viên"]
-    AIEngine["fa:fa-brain Bộ máy GNN Engine (System)"]
+    %% Primary Actors (Bên trái)
+    Student["fa:fa-user-graduate<br/>Học viên<br/>(Student)"]
+    Expert["fa:fa-chalkboard-teacher<br/>Chuyên gia Tri thức<br/>(Domain Expert)"]
 
-    subgraph BusinessSystem["HỆ THỐNG HỌC TẬP THÍCH ỨNG DỰA TRÊN ĐỒ THỊ TRI THỨC"]
-        UC1["Làm bài kiểm tra đánh giá"]
-        UC2["Xem đồ thị tri thức cá nhân hóa (Nút Xanh / Đỏ)"]
-        UC3["Xem phân tích nút gốc gây hổng kiến thức"]
-        UC4["Học tập theo lộ trình thích ứng đề xuất"]
-        
-        UC5["Thiết lập danh mục khái niệm (Concepts)"]
-        UC6["Xây dựng quan hệ tiên quyết (Prerequisites)"]
-        UC7["Kiểm tra tính phi chu trình (DAG Validation)"]
-        
-        UC8["Mô hình hóa vết tương tác (Embedding)"]
-        UC9["Dự đoán xác suất nắm vững khái niệm"]
-        UC10["Tự động quy hoạch lộ trình thích ứng"]
+    %% System Boundary
+    subgraph SystemBoundary["«subsystem»<br/>Hệ thống Học tập Thích ứng (GNN-based Adaptive Learning)"]
+        UC1(["Xem Đồ thị Tri thức tương tác"])
+        UC2(["Làm bài kiểm tra chẩn đoán"])
+        UC3(["Xem phân tích nút gốc gây hổng kiến thức"])
+        UC4(["Học theo lộ trình thích ứng đề xuất"])
+        UC5(["Thiết lập khái niệm & quan hệ tiên quyết"])
+        UC6(["Kiểm tra tính phi chu trình (DAG Validation)"])
+        UC7(["Mô hình hóa vết học tập & Cập nhật GRU"])
+        UC8(["Suy luận lan truyền thông điệp GraphSAGE/GAT"])
     end
 
-    Student --> UC1
-    Student --> UC2
-    Student --> UC3
-    Student --> UC4
+    %% Secondary Supporting Actor (Bên phải)
+    GNN["fa:fa-server<br/>Bộ máy AI / GNN Engine<br/>(PyTorch Geometric)"]
 
-    Expert --> UC5
-    Expert --> UC6
-    Expert --> UC7
+    %% Associations: Student
+    Student --- UC1
+    Student --- UC2
+    Student --- UC3
+    Student --- UC4
 
-    AIEngine --> UC8
-    AIEngine --> UC9
-    AIEngine --> UC10
+    %% Associations: Expert
+    Expert --- UC5
+    Expert --- UC6
 
-    UC1 -.->|Kích hoạt| UC8
-    UC9 -.->|Cung cấp dữ liệu| UC2
-    UC9 -.->|Truy vết root-cause| UC3
-    UC10 -.->|Sinh nội dung cho| UC4
+    %% Associations: GNN Engine (Bên phải)
+    UC2 --- GNN
+    UC7 --- GNN
+    UC8 --- GNN
+    UC3 --- GNN
+    UC4 --- GNN
+    UC6 --- GNN
 ```
 
 #### 2.2. Activity Diagram Quy trình Chẩn đoán & Thích ứng Nghiệp vụ
 
 ```mermaid
 flowchart TD
-    subgraph Swimlane_Student["Học viên"]
-        Act_Start([Bắt đầu làm bài kiểm tra]) --> Act_Submit["Nộp danh sách câu trả lời"]
-        Act_ViewReport["Quan sát Đồ thị tri thức (Nhận diện khái niệm Đỏ / Xanh)"]
-        Act_Learn["Bắt đầu học lộ trình khắc phục đề xuất"] --> Act_End([Hoàn thành chu trình thích ứng])
+    %% Định nghĩa 3 làn phân cấp (Swimlanes)
+    subgraph Lane1["Học viên (Student)"]
+        A_Start(( )) --> A_TakeQuiz["Làm bài kiểm tra chẩn đoán"]
+        A_TakeQuiz --> A_Submit["Nộp danh sách câu trả lời"]
+        A_ViewGraph["Quan sát Đồ thị Tri thức cá nhân hóa<br/>(Nút Xanh / Vàng / Đỏ)"]
+        A_FollowPath["Học tập theo lộ trình phục hồi topo"] --> A_End((( )))
     end
 
-    subgraph Swimlane_GNN["Bộ máy Học máy (GNN Engine)"]
-        Proc_Vectorize["Biểu diễn tương tác (c_t, r_t) & Nhúng đồ thị tri thức"]
-        Proc_MessagePassing["Truyền thông điệp (Message Passing) qua các đỉnh tiên quyết"]
-        Proc_Predict["Tính toán phân phối xác suất P(Mastery) trên toàn đồ thị"]
-        Proc_Diagnosis{"Có khái niệm bị hổng? (P < 0.5)"}
-        Proc_TraceRoot["Duyệt ngược đồ thị tìm Nút tiên quyết gốc (Root-cause)"]
-        Proc_Plan["Quy hoạch lộ trình phục hồi bằng thuật toán Topo"]
+    subgraph Lane2["Bộ máy GNN (GNN Inference Engine)"]
+        B_Vectorize["Biểu diễn vector tương tác (c_t, r_t)<br/>& Cập nhật trạng thái GRU"]
+        B_MessagePassing["Thực hiện Graph Message Passing<br/>(GraphSAGE / GAT Layers)"]
+        B_Predict["Tính xác suất nắm vững P trên toàn đồ thị"]
+        B_Check{"Kiểm tra xác suất<br/>P < 0.5?"}
+        B_TraceRoot["Truy vết ngược tìm nút gốc hổng (Root-cause)"]
+        B_TopoSort["Quy hoạch lộ trình học tập bằng Topological Sort"]
+        B_MasteryUpdate["Ghi nhận làm chủ toàn bộ kiến thức"]
     end
 
-    subgraph Swimlane_Storage["Kho Tri thức & Dữ liệu"]
-        Data_KG[("Đồ thị Tri thức DAG (Junyi/ASSISTments)")]
-        Data_Logs[("Lịch sử vết tương tác học viên")]
+    subgraph Lane3["Cơ sở Tri thức & Dữ liệu (Knowledge Base)"]
+        C_FetchGraph["Truy vấn Đồ thị DAG<br/>(Ma trận kề A & Đặc trưng X)"]
+        C_LogState["Lưu vết nhận thức mới của học viên"]
     end
 
-    Act_Submit --> Proc_Vectorize
-    Data_KG -.-> Proc_Vectorize
-    Data_Logs -.-> Proc_Vectorize
-    Proc_Vectorize --> Proc_MessagePassing
-    Proc_MessagePassing --> Proc_Predict
-    Proc_Predict --> Proc_Diagnosis
-    
-    Proc_Diagnosis -- "Không (Nắm vững toàn bộ)" --> Act_End
-    Proc_Diagnosis -- "Có (Phát hiện lỗ hổng)" --> Proc_TraceRoot
-    Proc_TraceRoot --> Proc_Plan
-    Proc_Plan --> Act_ViewReport
-    Act_ViewReport --> Act_Learn
+    %% Luồng chuyển tiếp liên làn (Cross-swimlane transitions)
+    A_Submit --> B_Vectorize
+    B_Vectorize --> C_FetchGraph
+    C_FetchGraph --> B_MessagePassing
+    B_MessagePassing --> B_Predict
+    B_Predict --> B_Check
+
+    %% Rẽ nhánh điều kiện [guard conditions]
+    B_Check -- "[Không có lỗ hổng: P >= 0.5]" --> B_MasteryUpdate
+    B_MasteryUpdate --> C_LogState
+    C_LogState --> A_End
+
+    B_Check -- "[Phát hiện lỗ hổng: P < 0.5]" --> B_TraceRoot
+    B_TraceRoot --> B_TopoSort
+    B_TopoSort --> A_ViewGraph
+    A_ViewGraph --> A_FollowPath
 ```
 
 ---
